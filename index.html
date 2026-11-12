@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Gamelan 8-Bit</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -139,6 +139,9 @@
     body.mobile #topRow button.big{padding:10px 12px}
     body.mobile #menuBtn .t{display:none}
   }
+  html{touch-action:manipulation}
+  body.mobile *{touch-action:manipulation}
+  body.mobile .bar,body.mobile .pot,body.mobile .gbtn,body.mobile .drum,body.mobile .bar *,body.mobile .pot *,body.mobile .gbtn *,body.mobile .drum *{touch-action:none}
   /* HP dimiringkan */
   body.mobile.land .wrap{display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:auto auto auto 1fr;gap:8px}
   body.mobile.land h1{display:none}
@@ -703,6 +706,26 @@
   $('#menuBtn').addEventListener('click', () => document.body.classList.add('drawer-open'));
   $('#closeDrawer').addEventListener('click', () => document.body.classList.remove('drawer-open'));
   $('#drawer').addEventListener('click', e => { if (e.target.id === 'drawer') document.body.classList.remove('drawer-open'); });
+
+  // ---------- cegah zoom ketuk-dua-kali & cubit ----------
+  const INSTR_SEL = '.bar,.pot,.gbtn,.drum';
+  document.addEventListener('touchstart', e => {
+    if (e.target.closest && e.target.closest(INSTR_SEL)) e.preventDefault();   // pointerdown tetap jalan
+  }, { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    const inForm = e.target.closest && e.target.closest('input,select,textarea,.sheet');
+    if (!inForm && now - lastTouchEnd < 350) {
+      e.preventDefault();                                   // blok zoom...
+      const btn = e.target.closest && e.target.closest('button');
+      if (btn && !btn.disabled) btn.click();                // ...tapi tombol tetap jalan
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => { if (!document.body.classList.contains('drawer-open')) e.preventDefault(); }, { passive: false }));
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 
   buildKeys(); fillPresets(); idleScope(); layout();
 })();
