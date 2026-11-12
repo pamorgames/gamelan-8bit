@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gamelan 8-Bit</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e6e4df; --body:#f4f3ef; --panel:#fbfaf7; --line:#d6d3cc; --ink:#1d1d1f; --dim:#8a877f;
+    --mint:#a8e6cf; --peach:#ffc3a0; --lilac:#cdbdff; --butter:#ffe48f; --sky:#a9d8ff; --coral:#ff8b7b; --sage:#c9e4a6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;}
+  body{min-height:100vh;padding:20px 14px}
+  .wrap{max-width:980px;margin:0 auto;background:var(--body);border-radius:22px;padding:22px 20px 14px;
+    box-shadow:0 1px 0 #fff inset,0 20px 40px -20px rgba(0,0,0,.25),0 0 0 1px var(--line)}
+  h1{font-family:'Press Start 2P',monospace;font-size:18px;margin:4px 6px 8px;letter-spacing:1px;display:flex;align-items:center;gap:12px}
+  h1::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--coral);box-shadow:20px 0 0 var(--butter),40px 0 0 var(--mint);margin-right:44px}
+  .sub{font-size:12px;color:var(--dim);line-height:1.6;margin:0 6px 18px}
+  .px{background:var(--panel);border-radius:16px;border:1px solid var(--line);padding:16px;margin:0 0 14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .label small{color:var(--dim);font-size:10px;font-weight:400;letter-spacing:.04em;text-transform:none}
+  button,select,input[type=text]{font-family:inherit;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--ink);background:#ecebe6;border:1px solid var(--line);
+    border-radius:10px;padding:10px 14px;cursor:pointer;transition:transform .06s,background .15s,box-shadow .15s;box-shadow:0 2px 0 var(--line)}
+  button:hover{background:#e3e1db}
+  button:active{transform:translateY(2px);box-shadow:0 0 0 var(--line)}
+  button.on{background:var(--mint);border-color:#8fd4bb;box-shadow:0 2px 0 #8fd4bb}
+  button:disabled{opacity:.4;cursor:default}
+  #rec{display:inline-flex;align-items:center;gap:6px}
+  #rec.on{background:var(--coral);border-color:#e9725f;box-shadow:0 2px 0 #e9725f;color:#fff;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:.6}}
+  button.big{font-size:13px;padding:14px 22px;border-radius:999px;background:var(--coral);border-color:#e9725f;box-shadow:0 3px 0 #e9725f;color:#fff}
+  button.big.on{background:var(--ink);border-color:#000;box-shadow:0 3px 0 #000;color:var(--butter)}
+  select{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+  input[type=text]{cursor:text;width:100%;letter-spacing:.3em;font-family:'Press Start 2P',monospace;font-size:11px;background:#fff;box-shadow:none}
+  input[type=text]:focus{outline:2px solid var(--sky);outline-offset:1px}
+  input[type=range]{accent-color:var(--coral);width:140px;vertical-align:middle}
+  .tempo{font-size:11px;font-weight:700;letter-spacing:.1em;display:flex;align-items:center;gap:8px}
+  .tempo span{font-family:'Press Start 2P',monospace;font-size:10px;background:var(--ink);color:var(--butter);padding:6px 8px;border-radius:6px;min-width:44px;text-align:center}
+  .seg{display:inline-flex;gap:0;background:#ecebe6;border-radius:12px;padding:3px;border:1px solid var(--line)}
+  .seg button{border:0;box-shadow:none;background:transparent;border-radius:9px}
+  .seg button.on{background:var(--lilac);box-shadow:0 1px 0 rgba(0,0,0,.08)}
+  .err{color:#d4553f;font-size:11px;min-height:14px;margin-top:8px}
+
+  /* beat grid */
+  .grid{display:grid;grid-template-columns:repeat(16,1fr);gap:5px;margin-top:6px}
+  .cell{background:#efede8;border-radius:8px;text-align:center;padding:10px 0 7px;font-family:'Press Start 2P',monospace;font-size:11px;transition:background .08s}
+  .cell .mk{display:block;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9px;color:var(--dim);margin-top:7px;height:10px;letter-spacing:.05em}
+  .cell.cur{background:var(--butter)}
+  .cell.cur .mk{color:var(--ink)}
+  .cell.gong{box-shadow:inset 0 0 0 2px var(--coral)}
+
+  /* saron */
+  .saron{display:flex;gap:10px;justify-content:center;padding:18px 12px;background:#ecebe6;border-radius:12px}
+  .bar{width:68px;height:124px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:12px 0;
+    font-family:'Press Start 2P',monospace;font-size:14px;cursor:pointer;user-select:none;touch-action:manipulation;
+    box-shadow:0 4px 0 rgba(0,0,0,.12);transition:transform .06s,filter .1s}
+  .bar:nth-child(7n+1){background:var(--mint)} .bar:nth-child(7n+2){background:var(--sky)} .bar:nth-child(7n+3){background:var(--lilac)}
+  .bar:nth-child(7n+4){background:var(--peach)} .bar:nth-child(7n+5){background:var(--butter)} .bar:nth-child(7n+6){background:var(--sage)}
+  .bar:nth-child(7n+7){background:var(--coral)} .bar:last-child{background:var(--mint)}
+  .bar .k{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:10px;opacity:.55}
+  .bar .nail{width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,.25)}
+  .bar.hit,.pot.hit,.gbtn.hit,.drum.hit{filter:brightness(1.12) saturate(1.3);transform:translateY(3px)}
+  .bar.hit,.pot.hit{box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  /* bonang */
+  .bonang{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:16px 12px;background:#ecebe6;border-radius:12px}
+  .pot{width:66px;height:66px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;touch-action:manipulation;
+    position:relative;box-shadow:0 4px 0 rgba(0,0,0,.12),inset 0 0 0 1px var(--line);transition:transform .06s,filter .1s}
+  .pot::before{content:"";position:absolute;inset:16px;border-radius:50%;background:var(--lilac)}
+  .pot:nth-child(odd)::before{background:var(--sky)}
+  .pot span{position:relative;font-family:'Press Start 2P',monospace;font-size:11px}
+  .pot .k{position:absolute;bottom:-18px;font-weight:700;font-size:10px;color:var(--dim)}
+  .bonang{padding-bottom:28px}
+  /* gongs & kendang */
+  .gongs{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+  .gbtn,.drum{background:#ecebe6;border-radius:14px;text-align:center;padding:14px 6px 12px;cursor:pointer;user-select:none;touch-action:manipulation;
+    font-size:11px;font-weight:700;letter-spacing:.12em;line-height:1.7;box-shadow:0 3px 0 var(--line);transition:transform .06s,filter .1s}
+  .gbtn i,.drum i{display:flex;align-items:center;justify-content:center;margin:4px auto 8px}
+  .gbtn i{width:46px;height:46px;border-radius:50%;background:var(--butter);box-shadow:inset 0 0 0 9px var(--peach)}
+  .gbtn i::after{content:"";display:block;width:12px;height:12px;border-radius:50%;background:var(--ink);opacity:.2}
+  .gbtn.gong i{width:64px;height:64px;background:var(--coral);box-shadow:inset 0 0 0 12px var(--peach)}
+  .gbtn.gong i::after{width:16px;height:16px}
+  .gbtn[data-i="kethuk"] i{background:var(--sage);box-shadow:inset 0 0 0 9px var(--mint)}
+  .gbtn[data-i="kenong"] i{background:var(--sky);box-shadow:inset 0 0 0 9px var(--lilac)}
+  .drum i{width:60px;height:34px;border-radius:17px;background:var(--peach);box-shadow:inset 10px 0 0 var(--butter),inset -10px 0 0 var(--butter)}
+  .drum[data-i="tak"] i{background:var(--lilac)}
+  .drum[data-i="dang"] i{background:var(--mint)}
+  .kb{color:var(--dim);font-size:10px;font-weight:600;letter-spacing:.06em}
+  .mutes{display:flex;flex-wrap:wrap;gap:8px}
+  .mutes button{font-size:10px;padding:8px 12px;border-radius:999px}
+  canvas{width:100%;height:84px;image-rendering:pixelated;background:var(--ink);border-radius:12px;display:block}
+  .foot{font-size:11px;color:var(--dim);line-height:1.7;text-align:center;margin-top:8px}
+  @media(max-width:640px){.bar{width:40px;height:100px;font-size:11px;border-radius:10px}.pot{width:52px;height:52px}.pot::before{inset:12px}
+    .cell{font-size:9px}h1{font-size:14px}.grid{grid-template-columns:repeat(8,1fr)}.wrap{padding:16px 12px}}
+
+  /* ---------- mode HP ---------- */
+  #mini,#tabs,#menuBtn,#drawer,.mhint{display:none}
+  body.mobile{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:none}
+  body.mobile .wrap{height:100dvh;max-width:none;border-radius:0;padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;gap:8px;box-shadow:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  body.mobile .wrap>.px{margin:0;padding:8px}
+  body.mobile h1{font-size:12px;margin:2px 4px}
+  body.mobile h1::before{width:10px;height:10px;box-shadow:14px 0 0 var(--butter),28px 0 0 var(--mint);margin-right:30px}
+  body.mobile .sub,body.mobile .foot,body.mobile .wrap .label{display:none}
+  body.mobile #topRow{flex-wrap:nowrap;gap:6px}
+  body.mobile #topRow button{padding:9px 10px;font-size:11px;white-space:nowrap}
+  body.mobile #topRow button.big{padding:10px 14px}
+  body.mobile #topRow .seg button{padding:7px 8px}
+  body.mobile #menuBtn{display:inline-flex;margin-left:auto}
+  body.mobile #mini{display:flex;gap:3px}
+  #mini .c{flex:1;min-width:0;overflow:hidden;background:#efede8;border-radius:5px;text-align:center;font-family:'Press Start 2P',monospace;font-size:8px;padding:6px 0}
+  #mini .c.cur{background:var(--butter)}
+  #mini .c.g{box-shadow:inset 0 0 0 1.5px var(--coral)}
+  body.mobile #pnlSaron{flex:1.15 1 0;min-height:0;display:flex}
+  body.mobile .saron{flex:1;gap:6px;padding:10px 8px}
+  body.mobile .bar{flex:1;width:auto;height:auto;font-size:12px;border-radius:12px;padding:12px 0}
+  body.mobile .bar .k{display:none}
+  body.mobile #tabs{display:flex}
+  body.mobile #tabs button{flex:1;padding:9px 6px;font-size:11px}
+  body.mobile #pnlBonang,body.mobile #pnlGong{flex:1 1 0;min-height:0;display:none}
+  body.mobile.tab-bonang #pnlBonang,body.mobile.tab-gong #pnlGong{display:flex}
+  body.mobile .bonang{flex:1;display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:10px;padding:10px;align-content:center;justify-items:center}
+  body.mobile .pot{width:min(100%,88px);height:auto;aspect-ratio:1}
+  body.mobile .pot::before{inset:22%}
+  body.mobile .pot .k{display:none}
+  body.mobile .gongs{flex:1;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:8px}
+  body.mobile .gbtn.gong{grid-column:4;grid-row:span 2}
+  body.mobile .gbtn,body.mobile .drum{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;font-size:9px;letter-spacing:.06em;min-height:0}
+  body.mobile .kb,body.mobile .gongs br{display:none}
+  body.mobile .gbtn i{width:38px;height:38px;flex:0 0 auto}
+  body.mobile .gbtn.gong i{width:62px;height:62px}
+  body.mobile .drum i{width:46px;height:26px;flex:0 0 auto}
+  @media (max-width:400px){
+    body.mobile #topRow{gap:5px}
+    body.mobile #topRow button{padding:9px 8px;font-size:10px}
+    body.mobile #topRow button.big{padding:10px 12px}
+    body.mobile #menuBtn .t{display:none}
+  }
+  /* HP dimiringkan */
+  body.mobile.land .wrap{display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:auto auto auto 1fr;gap:8px}
+  body.mobile.land h1{display:none}
+  body.mobile.land #pnlCtl,body.mobile.land #mini{grid-column:1 / -1}
+  body.mobile.land #pnlSaron{grid-column:1;grid-row:3 / 5}
+  body.mobile.land #tabs{grid-column:2;grid-row:3}
+  body.mobile.land #pnlBonang,body.mobile.land #pnlGong{grid-column:2;grid-row:4}
+  /* laci pengaturan */
+  body.mobile.drawer-open #drawer{display:flex}
+  #drawer{position:fixed;inset:0;background:rgba(29,29,31,.35);z-index:60;align-items:flex-end}
+  #drawer .sheet{background:var(--body);width:100%;max-height:88dvh;overflow-y:auto;border-radius:20px 20px 0 0;
+    padding:14px 12px calc(16px + env(safe-area-inset-bottom));touch-action:pan-y;overscroll-behavior:contain}
+  .sheetHead{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.12em;margin-bottom:12px}
+  #drawer .px{margin-bottom:10px;padding:12px}
+  #drawer .grid{grid-template-columns:repeat(8,1fr)}
+  #drawer input[type=text]{font-size:16px;letter-spacing:.12em}
+  #drawer .label small{display:none}
+  #drawer #pnlBal .row{flex-wrap:wrap!important}
+  #drawer #pnlBal input{order:-1;flex:1 1 100%}
+  body.mobile .mhint{display:block;font-size:11px;color:var(--dim);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GAMELAN 8-BIT</h1>
+  <div class="sub">Saron, bonang, kenong, kempul, gong &amp; kendang &mdash; disintesis gelombang kotak ala konsol jadul.<br>Klik/tap instrumen atau pakai keyboard. Tekan PLAY untuk memutar pola lancaran.</div>
+
+  <div class="px" id="pnlCtl">
+    <div class="row" id="topRow">
+      <button id="play" class="big">&#9654; PLAY</button>
+      <div class="seg" id="larasSeg">
+        <button data-l="slendro" class="on">SLENDRO</button>
+        <button data-l="pelog">PELOG</button>
+      </div>
+      <span class="row" id="ctlExtra">
+        <label class="tempo">TEMPO <input id="tempo" type="range" min="40" max="180" value="96"> <span id="tval">96</span></label>
+        <button id="crush" class="on" title="Bitcrusher">8-BIT: ON</button>
+      </span>
+      <button id="menuBtn">&#9776;<span class="t">&nbsp;POLA</span></button>
+    </div>
+  </div>
+
+  <div id="mini"></div>
+
+  <div class="px" id="pnlRec">
+    <div class="label">REKAM PERMAINAN <small>rekam ketukanmu, putar ulang, atau jadikan balungan</small></div>
+    <div class="row">
+      <button id="rec">&#9679; REC</button>
+      <button id="pbBtn" disabled>&#9654; PUTAR</button>
+      <button id="loopBtn">LOOP: OFF</button>
+      <button id="toBal" disabled>SARON &rarr; BALUNGAN</button>
+      <button id="clrRec" disabled>HAPUS</button>
+      <span id="recStat" style="font-size:8px;color:var(--dim)">Belum ada rekaman.</span>
+    </div>
+  </div>
+
+  <div class="px" id="pnlBal">
+    <div class="label">BALUNGAN <small>angka laras, titik = kosong, gong di ketukan terakhir</small></div>
+    <div class="row" style="flex-wrap:nowrap">
+      <select id="preset" style="flex:0 0 auto"></select>
+      <input id="bal" type="text" spellcheck="false">
+      <button id="resetBal" style="flex:0 0 auto" title="Kembalikan ke pola asli">&#8634; RESET</button>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="px" id="pnlSaron">
+    <div class="label">SARON <small>keyboard 1 2 3 4 5 6 7 8</small></div>
+    <div class="saron" id="saron"></div>
+  </div>
+
+  <div class="seg" id="tabs"><button data-t="bonang" class="on">BONANG</button><button data-t="gong">GONG &amp; KENDANG</button></div>
+
+  <div class="px" id="pnlBonang">
+    <div class="label">BONANG <small>keyboard Q W E R T Y U I</small></div>
+    <div class="bonang" id="bonang"></div>
+  </div>
+
+  <div class="px" id="pnlGong">
+    <div class="label">GONG &amp; KENDANG</div>
+    <div class="gongs">
+      <div class="gbtn" data-i="kethuk"><i></i>KETHUK<br><span class="kb">[F]</span></div>
+      <div class="gbtn" data-i="kenong"><i></i>KENONG<br><span class="kb">[H]</span></div>
+      <div class="gbtn" data-i="kempul"><i></i>KEMPUL<br><span class="kb">[G]</span></div>
+      <div class="gbtn gong" data-i="gong"><i></i>GONG<br><span class="kb">[SPASI]</span></div>
+      <div class="drum" data-i="dhung"><i></i>DHUNG<br><span class="kb">[J]</span></div>
+      <div class="drum" data-i="tak"><i></i>TAK<br><span class="kb">[K]</span></div>
+      <div class="drum" data-i="dang"><i></i>DANG<br><span class="kb">[L]</span></div>
+    </div>
+  </div>
+
+  <div class="px" id="pnlMix">
+    <div class="label">MIXER &amp; OSILOSKOP <small>matikan instrumen saat pola diputar</small></div>
+    <div class="mutes" id="mutes"></div>
+    <div style="height:12px"></div>
+    <canvas id="scope" width="320" height="40"></canvas>
+  </div>
+
+  <div class="foot">Laras didekati dengan sen: slendro &asymp; 5 nada rata ~240 sen, pelog 7 nada tak rata.<br>Gamelan asli tiap perangkat punya tuning sendiri &mdash; ini versi chiptune-nya.</div>
+</div>
+
+<div id="drawer">
+  <div class="sheet">
+    <div class="sheetHead"><b>POLA &amp; PENGATURAN</b><button id="closeDrawer">TUTUP &#10005;</button></div>
+    <div id="drawerBody">
+      <div class="px" id="pnlExtra"><div class="label">SUARA</div><div id="extraSlot"></div></div>
+    </div>
+    <div class="mhint">Tidak ada suara di iPhone? Coba matikan mode senyap (tombol di samping HP).</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- Laras ----------
+  const LARAS = {
+    slendro: { notes: ['1','2','3','5','6'], cents: [0,240,480,720,960] },
+    pelog:   { notes: ['1','2','3','4','5','6','7'], cents: [0,120,270,540,670,785,950] }
+  };
+  const PRESETS = {
+    slendro: [
+      ['Pola A (lancaran)', '. 5 . 3 . 5 . 2 . 5 . 3 . 6 . 5'],
+      ['Pola B',            '6 5 3 2 6 5 3 2 5 6 1 6 2 1 6 5'],
+      ['Pola C (rame)',     '2 1 2 6 2 1 2 6 3 5 6 1 6 5 3 2'],
+    ],
+    pelog: [
+      ['Pola A (lancaran)', '. 3 . 2 . 3 . 1 . 3 . 2 . 6 . 5'],
+      ['Pola B',            '3 5 3 2 3 5 3 2 5 6 5 3 2 1 2 6'],
+      ['Pola C (barang)',   '7 6 5 6 7 6 5 6 2 3 2 7 6 5 3 2'],
+    ]
+  };
+  let laras = 'slendro';
+  const BASE = 262; // Hz, nada 1 saron
+
+  function noteFreq(idx, oct = 0) {
+    const L = LARAS[laras], n = L.cents.length;
+    const o = Math.floor(idx / n), i = ((idx % n) + n) % n;
+    return BASE * Math.pow(2, (L.cents[i] + 1200 * (o + oct)) / 1200);
+  }
+
+  // ---------- Audio ----------
+  let ctx, master, crusher, analyser, dry, wet, noiseBuf, pulse25, pulse12;
+  let crushOn = true;
+  const muted = {};
+
+  function initAudio() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = 0.8;
+    crusher = ctx.createWaveShaper();
+    const N = 2048, curve = new Float32Array(N), steps = 10;
+    for (let i = 0; i < N; i++) { const x = i / (N - 1) * 2 - 1; curve[i] = Math.round(x * steps) / steps; }
+    crusher.curve = curve;
+    dry = ctx.createGain(); wet = ctx.createGain();
+    analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+    const comp = ctx.createDynamicsCompressor();
+    master.connect(dry); master.connect(crusher); crusher.connect(wet);
+    dry.connect(comp); wet.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
+    setCrush(crushOn);
+    // stepped NES-ish noise
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); let v = 0;
+    for (let i = 0; i < d.length; i++) { if (i % 6 === 0) v = Math.random() < .5 ? -1 : 1; d[i] = v; }
+    pulse25 = makePulse(0.25); pulse12 = makePulse(0.125);
+    drawScope();
+  }
+  function makePulse(duty) {
+    const n = 64, re = new Float32Array(n), im = new Float32Array(n);
+    for (let k = 1; k < n; k++) im[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+    return ctx.createPeriodicWave(re, im);
+  }
+  function setCrush(on) {
+    crushOn = on;
+    if (!ctx) return;
+    dry.gain.value = on ? 0 : 1; wet.gain.value = on ? 1 : 0;
+  }
+
+  function tone({ f, wave = 'square', dur = .6, vol = .15, t, attack = .002, sweep = 0, sweepTime = .04 }) {
+    const o = ctx.createOscillator();
+    if (wave === 'p25') o.setPeriodicWave(pulse25);
+    else if (wave === 'p12') o.setPeriodicWave(pulse12);
+    else o.type = wave;
+    o.frequency.setValueAtTime(f * (1 + sweep), t);
+    if (sweep) o.frequency.exponentialRampToValueAtTime(f, t + sweepTime);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + .05);
+  }
+  function noise({ t, dur = .06, vol = .2, hp = 2000 }) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master);
+    s.start(t, Math.random() * .5); s.stop(t + dur + .02);
+  }
+
+  // ---------- Instrumen ----------
+  const INST = {
+    saron(idx, t) {
+      const f = noteFreq(idx);
+      tone({ f, wave: 'square', dur: 1.1, vol: .11, t });
+      tone({ f: f + 3.5, wave: 'p25', dur: 1.0, vol: .07, t });          // ombak
+      tone({ f: f * 4, wave: 'square', dur: .04, vol: .05, t });         // tabuh click
+    },
+    bonang(idx, t) {
+      const f = noteFreq(idx, 1);
+      tone({ f, wave: 'p25', dur: .55, vol: .09, t, sweep: .03 });
+      tone({ f: f * 2.01, wave: 'triangle', dur: .25, vol: .05, t });
+    },
+    kethuk(_, t) {
+      tone({ f: noteFreq(1, -1), wave: 'triangle', dur: .12, vol: .35, t, sweep: .2, sweepTime: .03 });
+      noise({ t, dur: .02, vol: .05, hp: 4000 });
+    },
+    kenong(idx, t) {
+      const f = noteFreq(idx ?? 2);
+      tone({ f, wave: 'triangle', dur: 1.8, vol: .32, t, sweep: .02 });
+      tone({ f: f + 2, wave: 'p12', dur: 1.4, vol: .04, t });
+    },
+    kempul(idx, t) {
+      const f = noteFreq(idx ?? 2, -1);
+      tone({ f, wave: 'triangle', dur: 2.2, vol: .4, t, sweep: .04 });
+      tone({ f: f + 1.6, wave: 'square', dur: 1.8, vol: .04, t });
+    },
+    gong(_, t) {
+      const f = noteFreq(1, -3); // ~ nada 2 rendah
+      tone({ f, wave: 'triangle', dur: 6, vol: .6, t, attack: .01, sweep: .08, sweepTime: .3 });
+      tone({ f: f + 1.2, wave: 'triangle', dur: 5.5, vol: .45, t, attack: .02 });  // ombak gong
+      tone({ f: f * 2, wave: 'square', dur: 3, vol: .05, t, attack: .02 });
+      noise({ t, dur: .08, vol: .06, hp: 300 });
+    },
+    dhung(_, t) { tone({ f: 85, wave: 'triangle', dur: .3, vol: .55, t, sweep: .8, sweepTime: .12 }); },
+    tak(_, t)   { noise({ t, dur: .05, vol: .25, hp: 2500 }); tone({ f: 420, wave: 'square', dur: .03, vol: .06, t }); },
+    dang(_, t)  { INST.dhung(0, t); noise({ t, dur: .08, vol: .18, hp: 1200 }); }
+  };
+
+  // ---------- UI: instrumen ----------
+  const $ = s => document.querySelector(s);
+  const saronEl = $('#saron'), bonangEl = $('#bonang');
+  const SARON_KEYS = '12345678', BONANG_KEYS = 'qwertyui';
+
+  function noteLabel(i) {
+    const L = LARAS[laras], n = L.notes.length;
+    return i >= n ? L.notes[i - n] + '̇' : L.notes[i];
+  }
+  function buildKeys() {
+    const n = LARAS[laras].notes.length;
+    saronEl.innerHTML = ''; bonangEl.innerHTML = '';
+    bonangEl.style.setProperty('--cols', Math.ceil((n + 1) / 2));
+    for (let i = 0; i <= n; i++) {
+      const b = document.createElement('div');
+      b.className = 'bar'; b.dataset.idx = i;
+      b.innerHTML = `<div class="nail"></div><div>${noteLabel(i)}</div><div class="k">${SARON_KEYS[i].toUpperCase()}</div><div class="nail"></div>`;
+      b.addEventListener('pointerdown', e => { e.preventDefault(); play('saron', i); });
+      saronEl.appendChild(b);
+      const p = document.createElement('div');
+      p.className = 'pot'; p.dataset.idx = i;
+      p.innerHTML = `<span>${noteLabel(i)}</span><div class="k">${BONANG_KEYS[i].toUpperCase()}</div>`;
+      p.addEventListener('pointerdown', e => { e.preventDefault(); play('bonang', i); });
+      bonangEl.appendChild(p);
+    }
+  }
+  document.querySelectorAll('.gbtn,.drum').forEach(el =>
+    el.addEventListener('pointerdown', e => { e.preventDefault(); play(el.dataset.i, null); }));
+
+  function flash(name, idx, delay = 0) {
+    let el;
+    if (name === 'saron') el = saronEl.children[idx];
+    else if (name === 'bonang') el = bonangEl.children[idx];
+    else el = document.querySelector(`[data-i="${name}"]`);
+    if (!el) return;
+    setTimeout(() => { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 110); }, Math.max(0, delay * 1000));
+  }
+  function play(name, idx, t) {
+    initAudio();
+    const now = ctx.currentTime;
+    if (t === undefined && recording) take.push({ t: now - recStart, name, idx });
+    t = t ?? now;
+    INST[name](idx, t);
+    flash(name, idx, t - now);
+  }
+
+  // ---------- Rekam & putar ulang ----------
+  let recording = false, recStart = 0, take = [], takeLen = 0;
+  let pbOn = false, pbStart = 0, pbIdx = 0, pbTimer = null, pbLoop = false, recTimer = null;
+  const recBtn = $('#rec'), pbBtn = $('#pbBtn'), loopBtn = $('#loopBtn'), toBalBtn = $('#toBal'), clrBtn = $('#clrRec'), recStat = $('#recStat');
+
+  function updRecUI() {
+    const has = take.length > 0;
+    pbBtn.disabled = !has || recording; toBalBtn.disabled = !has || recording; clrBtn.disabled = !has || recording;
+    if (recording) return;
+    recStat.textContent = has ? `${take.length} pukulan · ${takeLen.toFixed(1)} detik` : 'Belum ada rekaman.';
+  }
+  recBtn.addEventListener('click', () => {
+    initAudio();
+    if (!recording) {
+      stopPlayback();
+      take = []; recording = true; recStart = ctx.currentTime;
+      recBtn.classList.add('on'); recBtn.innerHTML = '&#9632; STOP REC';
+      recTimer = setInterval(() => { recStat.textContent = `Merekam... ${(ctx.currentTime - recStart).toFixed(1)} dtk · ${take.length} pukulan`; }, 100);
+      updRecUI();
+    } else {
+      recording = false; clearInterval(recTimer);
+      recBtn.classList.remove('on'); recBtn.innerHTML = '&#9679; REC';
+      const end = ctx.currentTime - recStart;
+      if (take.length) {
+        const off = Math.max(0, take[0].t - 0.05);       // potong hening di awal
+        take.forEach(e => e.t -= off);
+        takeLen = Math.max(0.3, end - off);
+      }
+      updRecUI();
+    }
+  });
+  function pbTick() {
+    const now = ctx.currentTime;
+    while (true) {
+      if (pbIdx >= take.length) {
+        if (pbLoop) { pbStart += takeLen; pbIdx = 0; continue; }
+        if (now > pbStart + takeLen) stopPlayback();
+        return;
+      }
+      const ev = take[pbIdx], tt = pbStart + ev.t;
+      if (tt > now + 0.12) return;
+      INST[ev.name](ev.idx, tt); flash(ev.name, ev.idx, tt - now);
+      pbIdx++;
+    }
+  }
+  function stopPlayback() {
+    pbOn = false; clearInterval(pbTimer);
+    pbBtn.innerHTML = '&#9654; PUTAR'; pbBtn.classList.remove('on');
+  }
+  pbBtn.addEventListener('click', () => {
+    initAudio();
+    if (pbOn) return stopPlayback();
+    pbOn = true; pbIdx = 0; pbStart = ctx.currentTime + 0.05;
+    pbTimer = setInterval(pbTick, 25); pbTick();
+    pbBtn.innerHTML = '&#9632; STOP'; pbBtn.classList.add('on');
+  });
+  loopBtn.addEventListener('click', () => {
+    pbLoop = !pbLoop; loopBtn.textContent = 'LOOP: ' + (pbLoop ? 'ON' : 'OFF'); loopBtn.classList.toggle('on', pbLoop);
+  });
+  clrBtn.addEventListener('click', () => { stopPlayback(); take = []; takeLen = 0; updRecUI(); });
+  toBalBtn.addEventListener('click', () => {
+    const L = LARAS[laras], n = L.notes.length;
+    const notes = take.filter(e => e.name === 'saron').map(e => L.notes[e.idx % n]);
+    if (!notes.length) { recStat.textContent = 'Tidak ada nada saron di rekaman.'; return; }
+    const groups = [];
+    for (let i = 0; i < notes.length && i < 64; i += 4) groups.push(notes.slice(i, i + 4).join(' '));
+    balEl.value = groups.join('  ');
+    parseBal();
+    recStat.textContent = `${Math.min(notes.length, 64)} nada saron dipindah ke balungan.`;
+  });
+
+  // keyboard
+  const held = new Set();
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    const k = e.key.toLowerCase();
+    if (held.has(k)) return; held.add(k);
+    const n = LARAS[laras].notes.length;
+    let i = SARON_KEYS.indexOf(k);
+    if (i >= 0 && i <= n) return play('saron', i);
+    i = BONANG_KEYS.indexOf(k);
+    if (i >= 0 && i <= n) return play('bonang', i);
+    const map = { ' ': 'gong', g: 'kempul', h: 'kenong', f: 'kethuk', j: 'dhung', k: 'tak', l: 'dang' };
+    if (map[k]) { e.preventDefault(); play(map[k], null); }
+  });
+  window.addEventListener('keyup', e => held.delete(e.key.toLowerCase()));
+
+  // ---------- Balungan & grid ----------
+  const balEl = $('#bal'), errEl = $('#err'), gridEl = $('#grid'), presetEl = $('#preset');
+  let seq = [];   // array of idx or null
+
+  function fillPresets() {
+    presetEl.innerHTML = PRESETS[laras].map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');
+    balEl.value = PRESETS[laras][0][1];
+    parseBal();
+  }
+  function parseBal() {
+    const L = LARAS[laras];
+    const toks = balEl.value.replace(/\s+/g, '').split('');
+    const out = []; const bad = [];
+    for (const t of toks) {
+      if (t === '.' || t === '-' || t === '0') out.push(null);
+      else { const i = L.notes.indexOf(t); if (i < 0) bad.push(t); else out.push(i); }
+    }
+    if (bad.length) { errEl.textContent = `Nada "${[...new Set(bad)].join(', ')}" tidak ada di laras ${laras}.`; return; }
+    if (!out.length) { errEl.textContent = 'Balungan kosong.'; return; }
+    if (out.length > 64) { errEl.textContent = 'Maksimal 64 ketukan.'; return; }
+    errEl.textContent = out.length % 4 ? 'Tip: panjang kelipatan 4 (satu gatra = 4 ketukan) terdengar paling pas.' : '';
+    seq = out; buildGrid();
+  }
+  function marks(i, len) {
+    const b = i + 1;
+    if (b === len) return 'GONG';
+    const m = [];
+    if (b % 2 === 1) m.push('t');
+    if (b % 4 === 0) m.push('N');
+    if (b % 4 === 2 && b > 2) m.push('P');
+    return m.join(' ');
+  }
+  function buildGrid() {
+    gridEl.innerHTML = '';
+    seq.forEach((n, i) => {
+      const c = document.createElement('div');
+      c.className = 'cell' + (i === seq.length - 1 ? ' gong' : '');
+      c.innerHTML = `${n === null ? '·' : LARAS[laras].notes[n]}<span class="mk">${marks(i, seq.length)}</span>`;
+      gridEl.appendChild(c);
+    });
+    const mini = $('#mini'); mini.innerHTML = '';
+    seq.forEach((n, i) => {
+      const c = document.createElement('div');
+      c.className = 'c' + (i === seq.length - 1 ? ' g' : '');
+      c.textContent = n === null ? '·' : LARAS[laras].notes[n];
+      mini.appendChild(c);
+    });
+  }
+  function markCur(i) {
+    [...gridEl.children].forEach((c, k) => c.classList.toggle('cur', k === i));
+    [...$('#mini').children].forEach((c, k) => c.classList.toggle('cur', k === i));
+  }
+  balEl.addEventListener('input', parseBal);
+  presetEl.addEventListener('change', () => { balEl.value = PRESETS[laras][presetEl.value][1]; parseBal(); });
+  $('#resetBal').addEventListener('click', () => { balEl.value = PRESETS[laras][presetEl.value][1]; parseBal(); });
+
+  // ---------- Sequencer ----------
+  let playing = false, beat = 0, nextTime = 0, timer = null, bpm = 96;
+  const KENDANG = 'D.T.T.DTD.T.T.DT'; // per 8 ketukan, setengah ketukan
+  const KENDANG_END = 'D.T.D.T.DTD.D..D';
+  function lastNote(i) { for (let k = 0; k < seq.length; k++) { const v = seq[(i - k + seq.length) % seq.length]; if (v !== null) return v; } return 2; }
+  function nextNote(i) { for (let k = 1; k <= seq.length; k++) { const v = seq[(i + k) % seq.length]; if (v !== null) return v; } return 2; }
+
+  function scheduleBeat(i, t) {
+    const len = seq.length, spb = 60 / bpm, b = i + 1, note = seq[i];
+    const go = (name, idx, tt) => { if (!muted[name]) { INST[name](idx, tt); flash(name, idx, tt - ctx.currentTime); } };
+    if (note !== null) go('saron', note, t);
+    // bonang mipil: mengantisipasi nada berikutnya, dua kali lipat kecepatan
+    const nx = nextNote(i), cur = note ?? lastNote(i);
+    go('bonang', cur, t); go('bonang', nx, t + spb / 2);
+    // struktur kolotomik
+    if (b === len) go('gong', null, t);
+    else {
+      if (b % 2 === 1) go('kethuk', null, t);
+      if (b % 4 === 0) go('kenong', note ?? lastNote(i), t);
+      if (b % 4 === 2 && b > 2) go('kempul', note ?? lastNote(i), t);
+    }
+    // kendang
+    const nearEnd = i >= len - 8;
+    const pat = nearEnd ? KENDANG_END : KENDANG;
+    const pos = (i % 8) * 2;
+    [0, 1].forEach(h => {
+      const c = pat[pos + h], tt = t + h * spb / 2;
+      const m = { D: 'dhung', T: 'tak', A: 'dang' }[c];
+      if (m && !muted.kendang) { INST[m](null, tt); flash(m, null, tt - ctx.currentTime); }
+    });
+    // grid
+    setTimeout(() => { if (playing) markCur(i); }, Math.max(0, (t - ctx.currentTime) * 1000));
+  }
+  function tick() {
+    while (nextTime < ctx.currentTime + 0.12) {
+      if (beat >= seq.length) beat = 0;
+      scheduleBeat(beat, nextTime);
+      nextTime += 60 / bpm; beat++;
+    }
+  }
+  const playBtn = $('#play');
+  playBtn.addEventListener('click', () => {
+    initAudio();
+    if (playing) {
+      playing = false; clearInterval(timer);
+      playBtn.innerHTML = '&#9654; PLAY'; playBtn.classList.remove('on');
+      markCur(-1);
+      return;
+    }
+    if (!seq.length) return;
+    playing = true; beat = 0; nextTime = ctx.currentTime + .08;
+    timer = setInterval(tick, 25); tick();
+    playBtn.innerHTML = '&#9632; STOP'; playBtn.classList.add('on');
+  });
+  const tempoEl = $('#tempo');
+  tempoEl.addEventListener('input', () => { bpm = +tempoEl.value; $('#tval').textContent = bpm; });
+
+  // laras switch
+  document.querySelectorAll('#larasSeg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#larasSeg button').forEach(x => x.classList.toggle('on', x === b));
+    laras = b.dataset.l; beat = 0;
+    buildKeys(); fillPresets();
+  }));
+  const crushBtn = $('#crush');
+  crushBtn.addEventListener('click', () => {
+    setCrush(!crushOn);
+    crushBtn.textContent = '8-BIT: ' + (crushOn ? 'ON' : 'OFF');
+    crushBtn.classList.toggle('on', crushOn);
+  });
+
+  // mixer
+  const mutesEl = $('#mutes');
+  ['saron', 'bonang', 'kethuk', 'kenong', 'kempul', 'gong', 'kendang'].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'on'; b.textContent = n.toUpperCase();
+    b.addEventListener('click', () => { muted[n] = !muted[n]; b.classList.toggle('on', !muted[n]); });
+    mutesEl.appendChild(b);
+  });
+
+  // osiloskop pixel
+  const cv = $('#scope'), g = cv.getContext('2d');
+  function idleScope() {
+    g.fillStyle = '#1d1d1f'; g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = '#a8e6cf'; for (let x = 0; x < cv.width; x += 2) g.fillRect(x, 20, 2, 2);
+  }
+  function drawScope() {
+    const buf = new Uint8Array(analyser.fftSize);
+    (function loop() {
+      analyser.getByteTimeDomainData(buf);
+      g.fillStyle = '#1d1d1f'; g.fillRect(0, 0, cv.width, cv.height);
+      for (let x = 0; x < cv.width; x += 2) {
+        const v = buf[Math.floor(x / cv.width * buf.length)];
+        const y = Math.round((v / 255) * (cv.height - 2) / 2) * 2;
+        g.fillStyle = Math.abs(v - 128) > 50 ? '#ff8b7b' : '#a8e6cf';
+        g.fillRect(x, y, 2, 2);
+      }
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  // ---------- tata letak HP ----------
+  const mqMobile = matchMedia('(max-width: 700px), (max-height: 500px) and (pointer: coarse)');
+  const mqLand = matchMedia('(orientation: landscape)');
+  const drawerBody = $('#drawerBody');
+  const moves = [
+    [$('#rec'), () => $('#topRow'), () => $('#menuBtn')],
+    [$('#ctlExtra'), () => $('#extraSlot'), () => null],
+    [$('#pnlRec'), () => drawerBody, () => null],
+    [$('#pnlBal'), () => drawerBody, () => null],
+    [$('#pnlMix'), () => drawerBody, () => null],
+  ].map(([el, tgt, before]) => {
+    const ph = document.createComment('slot'); el.parentNode.insertBefore(ph, el);
+    return { el, tgt, before, ph };
+  });
+  function layout() {
+    const mob = mqMobile.matches;
+    document.body.classList.toggle('mobile', mob);
+    document.body.classList.toggle('land', mob && mqLand.matches);
+    if (!document.body.classList.contains('tab-gong')) document.body.classList.add('tab-bonang');
+    moves.forEach(m => {
+      if (mob) m.tgt().insertBefore(m.el, m.before());
+      else m.ph.parentNode.insertBefore(m.el, m.ph.nextSibling);
+    });
+    if (!mob) document.body.classList.remove('drawer-open');
+  }
+  (mqMobile.addEventListener ? mqMobile.addEventListener('change', layout) : mqMobile.addListener(layout));
+  (mqLand.addEventListener ? mqLand.addEventListener('change', layout) : mqLand.addListener(layout));
+  document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+    document.body.classList.toggle('tab-bonang', b.dataset.t === 'bonang');
+    document.body.classList.toggle('tab-gong', b.dataset.t === 'gong');
+  }));
+  $('#menuBtn').addEventListener('click', () => document.body.classList.add('drawer-open'));
+  $('#closeDrawer').addEventListener('click', () => document.body.classList.remove('drawer-open'));
+  $('#drawer').addEventListener('click', e => { if (e.target.id === 'drawer') document.body.classList.remove('drawer-open'); });
+
+  buildKeys(); fillPresets(); idleScope(); layout();
+})();
+</script>
+</body>
+</html>
