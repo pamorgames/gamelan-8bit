@@ -214,7 +214,7 @@
     <div class="label">REKAM PERMAINAN <small>semua yang terdengar ikut terekam &mdash; putar ulang atau bagikan sebagai MP3</small></div>
     <div class="row">
       <button id="rec">&#9679; REC</button>
-      <button id="pbBtn" disabled>&#9654; PUTAR</button>
+      <button id="pbBtn" disabled>&#9654; PUTAR REKAMAN</button>
       <button id="shareBtn" class="share" disabled>&#10548; BAGIKAN</button>
       <button id="loopBtn">LOOP: OFF</button>
       <button id="toBal" disabled>SARON &rarr; BALUNGAN</button>
@@ -493,7 +493,13 @@
         take.forEach(e => e.t -= off);
         takeLen = Math.max(0.3, end - off);
         prepareMp3();
-        if (document.body.classList.contains('mobile')) $('#menuBtn').classList.add('badge');
+        if (document.body.classList.contains('mobile')) {
+          // di HP: buka laci supaya tombol PUTAR REKAMAN & BAGIKAN langsung terlihat
+          setTimeout(() => {
+            document.body.classList.add('drawer-open');
+            const sh = document.querySelector('#drawer .sheet'); if (sh) sh.scrollTop = 0;
+          }, 150);
+        }
       }
       updRecUI();
     }
@@ -514,12 +520,13 @@
   }
   function stopPlayback() {
     pbOn = false; clearInterval(pbTimer);
-    pbBtn.innerHTML = '&#9654; PUTAR'; pbBtn.classList.remove('on');
+    pbBtn.innerHTML = '&#9654; PUTAR REKAMAN'; pbBtn.classList.remove('on');
   }
   pbBtn.addEventListener('click', () => {
     initAudio();
     if (pbOn) return stopPlayback();
     pbOn = true; pbIdx = 0; pbStart = ctx.currentTime + 0.05;
+    document.body.classList.remove('drawer-open');          // di HP: tutup laci supaya wayang terlihat
     pbTimer = setInterval(pbTick, 25); pbTick();
     pbBtn.innerHTML = '&#9632; STOP'; pbBtn.classList.add('on');
   });
@@ -1030,8 +1037,8 @@
   const drawerBody = $('#drawerBody');
   const moves = [
     [$('#rec'), () => $('#topRow'), () => $('#menuBtn')],
+    [$('#pnlRec'), () => drawerBody, () => $('#pnlExtra')],
     [$('#ctlExtra'), () => $('#extraSlot'), () => null],
-    [$('#pnlRec'), () => drawerBody, () => null],
     [$('#pnlBal'), () => drawerBody, () => null],
     [$('#pnlMix'), () => drawerBody, () => null],
   ].map(([el, tgt, before]) => {
