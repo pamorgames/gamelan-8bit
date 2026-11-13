@@ -10,7 +10,7 @@
     --bg:#e6e4df; --body:#f4f3ef; --panel:#fbfaf7; --line:#d6d3cc; --ink:#1d1d1f; --dim:#8a877f;
     --mint:#a8e6cf; --peach:#ffc3a0; --lilac:#cdbdff; --butter:#ffe48f; --sky:#a9d8ff; --coral:#ff8b7b; --sage:#c9e4a6;
   }
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;}
   body{min-height:100vh;padding:20px 14px}
   .wrap{max-width:980px;margin:0 auto;background:var(--body);border-radius:22px;padding:22px 20px 14px;
@@ -31,6 +31,15 @@
   #rec{display:inline-flex;align-items:center;gap:6px}
   #rec.on{background:var(--coral);border-color:#e9725f;box-shadow:0 2px 0 #e9725f;color:#fff;animation:blink 1s steps(2) infinite}
   @keyframes blink{50%{opacity:.6}}
+  #rec .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--coral);vertical-align:-1px}
+  #rec.on .dot{background:#fff;border-radius:2px}
+  #rec .t{margin-left:6px}
+  #pbBtn.ready{animation:ready .5s ease-out 3}
+  @keyframes ready{50%{transform:scale(1.07)}}
+  button.big:disabled{background:#f2c9c1;border-color:#e9b3a8;box-shadow:0 3px 0 #e9b3a8;opacity:1;color:#fff}
+  .hud button{all:unset;cursor:pointer;color:var(--butter);font:inherit;letter-spacing:inherit}
+  .hud button:hover{color:#fff}
+  body.mobile .hud button{text-decoration:underline dotted;text-underline-offset:3px}
   button.share:not(:disabled){background:var(--sky);border-color:#86c2f0;box-shadow:0 2px 0 #86c2f0}
   #menuBtn{position:relative}
   #menuBtn.badge::after{content:"";position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px var(--body)}
@@ -125,6 +134,10 @@
   body.mobile #topRow button{padding:9px 10px;font-size:11px;white-space:nowrap}
   body.mobile #topRow button.big{padding:10px 14px}
   body.mobile #topRow .seg button{padding:7px 8px}
+  body.mobile #larasSeg{display:none}
+  body.mobile #topRow .t{display:none}
+  body.mobile #rec,body.mobile #shareBtn,body.mobile #menuBtn{min-width:42px;justify-content:center;display:inline-flex;align-items:center}
+  body.mobile #rec .dot{width:12px;height:12px}
   body.mobile #menuBtn{display:inline-flex;margin-left:auto}
   body.mobile #mini{display:flex;gap:3px}
   #mini .c{flex:1;min-width:0;overflow:hidden;background:#efede8;border-radius:5px;text-align:center;font-family:'Press Start 2P',monospace;font-size:8px;padding:6px 0}
@@ -139,8 +152,8 @@
   body.mobile #pnlBonang,body.mobile #pnlGong{flex:1 1 0;min-height:0;display:none}
   body.mobile.tab-bonang #pnlBonang,body.mobile.tab-gong #pnlGong{display:flex}
   body.mobile .bonang{flex:1;display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:10px;padding:10px;align-content:center;justify-items:center}
-  body.mobile .bonang{grid-template-rows:repeat(2,minmax(0,1fr))}
-  body.mobile .pot{height:min(100%,88px);width:auto;max-width:100%;aspect-ratio:1}
+  body.mobile .bonang{grid-template-rows:repeat(2,minmax(0,1fr));overflow:hidden}
+  body.mobile .pot{width:var(--pot,60px);height:var(--pot,60px);aspect-ratio:auto}
   body.mobile .pot::before{inset:22%}
   body.mobile .pot .k{display:none}
   body.mobile .gongs{flex:1;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:8px}
@@ -188,7 +201,10 @@
 
   <div class="px" id="pnlCtl">
     <div class="row" id="topRow">
-      <button id="play" class="big">&#9654; PLAY</button>
+      <button id="rec" aria-label="Rekam"><span class="dot"></span><span class="t">REC</span></button>
+      <button id="pbBtn" class="big" disabled>&#9654; PLAY</button>
+      <button id="play" title="Iringan pola balungan otomatis">&#9835; POLA</button>
+      <button id="shareBtn" class="share" disabled aria-label="Bagikan"><span>&#10548;</span><span class="t">&nbsp;BAGIKAN</span></button>
       <div class="seg" id="larasSeg">
         <button data-l="slendro" class="on">SLENDRO</button>
         <button data-l="pelog">PELOG</button>
@@ -197,13 +213,13 @@
         <label class="tempo">TEMPO <input id="tempo" type="range" min="40" max="180" value="96"> <span id="tval">96</span></label>
         <button id="crush" class="on" title="Bitcrusher">8-BIT: ON</button>
       </span>
-      <button id="menuBtn">&#9776;<span class="t">&nbsp;POLA</span></button>
+      <button id="menuBtn" aria-label="Pengaturan">&#9776;</button>
     </div>
   </div>
 
   <div class="px" id="pnlLcd">
     <div class="lcd">
-      <div class="hud"><span id="hudL">KELIR</span><span id="hudC">SLENDRO</span><span id="hudR">BPM 96</span></div>
+      <div class="hud"><span id="hudL">KELIR</span><button id="hudC" type="button" title="Ganti laras">SLENDRO</button><span id="hudR">BPM 96</span></div>
       <div class="screen"><canvas id="lcd" width="192" height="60" aria-label="Layar wayang yang bergerak mengikuti tabuhan" role="img"></canvas></div>
     </div>
   </div>
@@ -211,11 +227,8 @@
   <div id="mini"></div>
 
   <div class="px" id="pnlRec">
-    <div class="label">REKAM PERMAINAN <small>semua yang terdengar ikut terekam &mdash; putar ulang atau bagikan sebagai MP3</small></div>
+    <div class="label">REKAMAN <small>REC merekam semua yang terdengar; PLAY memutarnya, BAGIKAN mengirim sebagai MP3</small></div>
     <div class="row">
-      <button id="rec">&#9679; REC</button>
-      <button id="pbBtn" disabled>&#9654; PUTAR REKAMAN</button>
-      <button id="shareBtn" class="share" disabled>&#10548; BAGIKAN</button>
       <button id="loopBtn">LOOP: OFF</button>
       <button id="toBal" disabled>SARON &rarr; BALUNGAN</button>
       <button id="clrRec" disabled>HAPUS</button>
@@ -471,7 +484,7 @@
     const has = take.length > 0;
     pbBtn.disabled = !has || recording; toBalBtn.disabled = !has || recording; clrBtn.disabled = !has || recording;
     shareBtn.disabled = !has || recording || !mp3;
-    shareBtn.innerHTML = has && !recording && mp3Busy ? 'MENYIAPKAN&hellip;' : '&#10548; BAGIKAN';
+    shareBtn.innerHTML = has && !recording && mp3Busy ? '<span>&hellip;</span>' : '<span>&#10548;</span><span class="t">&nbsp;BAGIKAN</span>';
     if (recording) return;
     recStat.textContent = has ? `${take.length} pukulan · ${takeLen.toFixed(1)} detik` : 'Belum ada rekaman.';
   }
@@ -480,12 +493,12 @@
     if (!recording) {
       stopPlayback();
       take = []; mp3 = null; recording = true; recStart = ctx.currentTime;
-      recBtn.classList.add('on'); recBtn.innerHTML = '&#9632; STOP REC';
+      recBtn.classList.add('on'); recBtn.innerHTML = '<span class="dot"></span><span class="t">STOP</span>';
       recTimer = setInterval(() => { recStat.textContent = `Merekam... ${(ctx.currentTime - recStart).toFixed(1)} dtk · ${take.length} pukulan`; }, 100);
       updRecUI();
     } else {
       recording = false; clearInterval(recTimer);
-      recBtn.classList.remove('on'); recBtn.innerHTML = '&#9679; REC';
+      recBtn.classList.remove('on'); recBtn.innerHTML = '<span class="dot"></span><span class="t">REC</span>';
       const end = ctx.currentTime - recStart;
       take = take.filter(e => e.t <= end).sort((a, b) => a.t - b.t);   // buang jadwal pola yang lewat batas
       if (take.length) {
@@ -493,13 +506,7 @@
         take.forEach(e => e.t -= off);
         takeLen = Math.max(0.3, end - off);
         prepareMp3();
-        if (document.body.classList.contains('mobile')) {
-          // di HP: buka laci supaya tombol PUTAR REKAMAN & BAGIKAN langsung terlihat
-          setTimeout(() => {
-            document.body.classList.add('drawer-open');
-            const sh = document.querySelector('#drawer .sheet'); if (sh) sh.scrollTop = 0;
-          }, 150);
-        }
+        pbBtn.classList.remove('ready'); void pbBtn.offsetWidth; pbBtn.classList.add('ready');
       }
       updRecUI();
     }
@@ -520,13 +527,12 @@
   }
   function stopPlayback() {
     pbOn = false; clearInterval(pbTimer);
-    pbBtn.innerHTML = '&#9654; PUTAR REKAMAN'; pbBtn.classList.remove('on');
+    pbBtn.innerHTML = '&#9654; PLAY'; pbBtn.classList.remove('on');
   }
   pbBtn.addEventListener('click', () => {
     initAudio();
     if (pbOn) return stopPlayback();
     pbOn = true; pbIdx = 0; pbStart = ctx.currentTime + 0.05;
-    document.body.classList.remove('drawer-open');          // di HP: tutup laci supaya wayang terlihat
     pbTimer = setInterval(pbTick, 25); pbTick();
     pbBtn.innerHTML = '&#9632; STOP'; pbBtn.classList.add('on');
   });
@@ -759,14 +765,14 @@
     initAudio();
     if (playing) {
       playing = false; clearInterval(timer);
-      playBtn.innerHTML = '&#9654; PLAY'; playBtn.classList.remove('on');
+      playBtn.innerHTML = '&#9835; POLA'; playBtn.classList.remove('on');
       markCur(-1);
       return;
     }
     if (!seq.length) return;
     playing = true; beat = 0; nextTime = ctx.currentTime + .08;
     timer = setInterval(tick, 25); tick();
-    playBtn.innerHTML = '&#9632; STOP'; playBtn.classList.add('on');
+    playBtn.innerHTML = '&#9632; POLA'; playBtn.classList.add('on');
   });
   const tempoEl = $('#tempo');
   tempoEl.addEventListener('input', () => { bpm = +tempoEl.value; $('#tval').textContent = bpm; });
@@ -1026,17 +1032,30 @@
   window.addEventListener('resize', fitLcd);
   setInterval(() => {
     $('#hudL').textContent = recording ? '● REC' : (playing ? '▶ MAIN' : (pbOn ? '▶ ULANG' : 'KELIR'));
-    $('#hudC').textContent = laras.toUpperCase();
+    $('#hudC').textContent = laras.toUpperCase() + ' \u21C4';
     $('#hudR').textContent = 'BPM ' + bpm;
   }, 150);
   requestAnimationFrame(lcdFrame);
+  $('#hudC').addEventListener('click', () => {
+    document.querySelector(`#larasSeg button[data-l="${laras === 'slendro' ? 'pelog' : 'slendro'}"]`).click();
+  });
+  // ukuran pencu bonang di HP dihitung dari ruang yang tersedia (Safari tidak selalu patuh pada % tinggi)
+  function fitPots() {
+    if (!document.body.classList.contains('mobile')) { bonangEl.style.removeProperty('--pot'); return; }
+    const r = bonangEl.getBoundingClientRect();
+    if (!r.height) return;
+    const cols = Math.ceil(bonangEl.children.length / 2), gap = 10, pad = 20;
+    const sz = Math.floor(Math.min(88, (r.height - pad - gap) / 2, (r.width - pad - gap * (cols - 1)) / cols));
+    bonangEl.style.setProperty('--pot', Math.max(36, sz) + 'px');
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitPots).observe(bonangEl);
+  window.addEventListener('resize', fitPots);
 
   // ---------- tata letak HP ----------
   const mqMobile = matchMedia('(max-width: 700px), (max-height: 500px) and (pointer: coarse)');
   const mqLand = matchMedia('(orientation: landscape)');
   const drawerBody = $('#drawerBody');
   const moves = [
-    [$('#rec'), () => $('#topRow'), () => $('#menuBtn')],
     [$('#pnlRec'), () => drawerBody, () => $('#pnlExtra')],
     [$('#ctlExtra'), () => $('#extraSlot'), () => null],
     [$('#pnlBal'), () => drawerBody, () => null],
@@ -1055,7 +1074,7 @@
       else m.ph.parentNode.insertBefore(m.el, m.ph.nextSibling);
     });
     if (!mob) document.body.classList.remove('drawer-open');
-    fitLcd();
+    fitLcd(); fitPots();
   }
   (mqMobile.addEventListener ? mqMobile.addEventListener('change', layout) : mqMobile.addListener(layout));
   (mqLand.addEventListener ? mqLand.addEventListener('change', layout) : mqLand.addListener(layout));
