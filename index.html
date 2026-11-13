@@ -31,6 +31,9 @@
   #rec{display:inline-flex;align-items:center;gap:6px}
   #rec.on{background:var(--coral);border-color:#e9725f;box-shadow:0 2px 0 #e9725f;color:#fff;animation:blink 1s steps(2) infinite}
   @keyframes blink{50%{opacity:.6}}
+  button.share:not(:disabled){background:var(--sky);border-color:#86c2f0;box-shadow:0 2px 0 #86c2f0}
+  #menuBtn{position:relative}
+  #menuBtn.badge::after{content:"";position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px var(--body)}
   button.big{font-size:13px;padding:14px 22px;border-radius:999px;background:var(--coral);border-color:#e9725f;box-shadow:0 3px 0 #e9725f;color:#fff}
   button.big.on{background:var(--ink);border-color:#000;box-shadow:0 3px 0 #000;color:var(--butter)}
   select{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
@@ -136,7 +139,8 @@
   body.mobile #pnlBonang,body.mobile #pnlGong{flex:1 1 0;min-height:0;display:none}
   body.mobile.tab-bonang #pnlBonang,body.mobile.tab-gong #pnlGong{display:flex}
   body.mobile .bonang{flex:1;display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:10px;padding:10px;align-content:center;justify-items:center}
-  body.mobile .pot{width:min(100%,88px);height:auto;aspect-ratio:1}
+  body.mobile .bonang{grid-template-rows:repeat(2,minmax(0,1fr))}
+  body.mobile .pot{height:min(100%,88px);width:auto;max-width:100%;aspect-ratio:1}
   body.mobile .pot::before{inset:22%}
   body.mobile .pot .k{display:none}
   body.mobile .gongs{flex:1;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:8px}
@@ -207,10 +211,11 @@
   <div id="mini"></div>
 
   <div class="px" id="pnlRec">
-    <div class="label">REKAM PERMAINAN <small>rekam ketukanmu, putar ulang, atau jadikan balungan</small></div>
+    <div class="label">REKAM PERMAINAN <small>semua yang terdengar ikut terekam &mdash; putar ulang atau bagikan sebagai MP3</small></div>
     <div class="row">
       <button id="rec">&#9679; REC</button>
       <button id="pbBtn" disabled>&#9654; PUTAR</button>
+      <button id="shareBtn" class="share" disabled>&#10548; BAGIKAN</button>
       <button id="loopBtn">LOOP: OFF</button>
       <button id="toBal" disabled>SARON &rarr; BALUNGAN</button>
       <button id="clrRec" disabled>HAPUS</button>
@@ -445,7 +450,7 @@
   function play(name, idx, t) {
     initAudio();
     const now = ctx.currentTime;
-    if (t === undefined && recording) take.push({ t: now - recStart, name, idx });
+    if (t === undefined) recEv(name, idx, now);
     t = t ?? now;
     INST[name](idx, t);
     flash(name, idx, t - now);
@@ -455,10 +460,18 @@
   let recording = false, recStart = 0, take = [], takeLen = 0;
   let pbOn = false, pbStart = 0, pbIdx = 0, pbTimer = null, pbLoop = false, recTimer = null;
   const recBtn = $('#rec'), pbBtn = $('#pbBtn'), loopBtn = $('#loopBtn'), toBalBtn = $('#toBal'), clrBtn = $('#clrRec'), recStat = $('#recStat');
+  const shareBtn = $('#shareBtn');
+  let mp3 = null, mp3Job = 0, mp3Busy = false;
+
+  function recEv(name, idx, t) {
+    if (recording && t >= recStart - 0.001) take.push({ t: t - recStart, name, idx });
+  }
 
   function updRecUI() {
     const has = take.length > 0;
     pbBtn.disabled = !has || recording; toBalBtn.disabled = !has || recording; clrBtn.disabled = !has || recording;
+    shareBtn.disabled = !has || recording || !mp3;
+    shareBtn.innerHTML = has && !recording && mp3Busy ? 'MENYIAPKAN&hellip;' : '&#10548; BAGIKAN';
     if (recording) return;
     recStat.textContent = has ? `${take.length} pukulan · ${takeLen.toFixed(1)} detik` : 'Belum ada rekaman.';
   }
@@ -466,7 +479,7 @@
     initAudio();
     if (!recording) {
       stopPlayback();
-      take = []; recording = true; recStart = ctx.currentTime;
+      take = []; mp3 = null; recording = true; recStart = ctx.currentTime;
       recBtn.classList.add('on'); recBtn.innerHTML = '&#9632; STOP REC';
       recTimer = setInterval(() => { recStat.textContent = `Merekam... ${(ctx.currentTime - recStart).toFixed(1)} dtk · ${take.length} pukulan`; }, 100);
       updRecUI();
@@ -474,10 +487,13 @@
       recording = false; clearInterval(recTimer);
       recBtn.classList.remove('on'); recBtn.innerHTML = '&#9679; REC';
       const end = ctx.currentTime - recStart;
+      take = take.filter(e => e.t <= end).sort((a, b) => a.t - b.t);   // buang jadwal pola yang lewat batas
       if (take.length) {
         const off = Math.max(0, take[0].t - 0.05);       // potong hening di awal
         take.forEach(e => e.t -= off);
         takeLen = Math.max(0.3, end - off);
+        prepareMp3();
+        if (document.body.classList.contains('mobile')) $('#menuBtn').classList.add('badge');
       }
       updRecUI();
     }
@@ -510,7 +526,103 @@
   loopBtn.addEventListener('click', () => {
     pbLoop = !pbLoop; loopBtn.textContent = 'LOOP: ' + (pbLoop ? 'ON' : 'OFF'); loopBtn.classList.toggle('on', pbLoop);
   });
-  clrBtn.addEventListener('click', () => { stopPlayback(); take = []; takeLen = 0; updRecUI(); });
+  clrBtn.addEventListener('click', () => { stopPlayback(); take = []; takeLen = 0; mp3 = null; updRecUI(); });
+
+  // ---------- Ekspor MP3 & bagikan ----------
+  function loadLame() {
+    if (window.lamejs) return Promise.resolve();
+    return new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+      sc.onload = () => window.lamejs ? res() : rej(new Error('lamejs'));
+      sc.onerror = rej;
+      document.head.appendChild(sc);
+    });
+  }
+  async function renderTake() {
+    const SR = 44100, TAIL = 3;
+    const len = Math.ceil((takeLen + TAIL) * SR);
+    const off = new OfflineAudioContext(1, len, SR);
+    const live = { ctx, master, pulse25, pulse12 };
+    // rantai efek yang sama dengan versi live
+    const m = off.createGain(); m.gain.value = 0.8;
+    const cr = off.createWaveShaper(); cr.curve = crusher.curve;
+    const d = off.createGain(), w = off.createGain();
+    d.gain.value = crushOn ? 0 : 1; w.gain.value = crushOn ? 1 : 0;
+    const comp = off.createDynamicsCompressor();
+    m.connect(d); m.connect(cr); cr.connect(w); d.connect(comp); w.connect(comp); comp.connect(off.destination);
+    try {
+      ctx = off; master = m; pulse25 = makePulse(0.25); pulse12 = makePulse(0.125);
+      take.forEach(ev => INST[ev.name](ev.idx, ev.t + 0.05));
+    } finally {
+      ({ ctx, master, pulse25, pulse12 } = live);
+    }
+    const buf = await off.startRendering();
+    const data = buf.getChannelData(0);
+    // potong ekor yang sudah hening
+    let end = data.length;
+    while (end > SR * (takeLen + 0.1) && Math.abs(data[end - 1]) < 0.0005) end--;
+    return data.subarray(0, Math.min(data.length, end + Math.floor(SR * 0.05)));
+  }
+  function toMp3(pcm) {
+    const enc = new lamejs.Mp3Encoder(1, 44100, 128);
+    const i16 = new Int16Array(pcm.length);
+    for (let i = 0; i < pcm.length; i++) { const v = Math.max(-1, Math.min(1, pcm[i])); i16[i] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+    const out = [];
+    for (let i = 0; i < i16.length; i += 1152) { const b = enc.encodeBuffer(i16.subarray(i, i + 1152)); if (b.length) out.push(b); }
+    const f = enc.flush(); if (f.length) out.push(f);
+    return new Blob(out, { type: 'audio/mpeg' });
+  }
+  function toWav(pcm) {
+    const SR = 44100, b = new ArrayBuffer(44 + pcm.length * 2), v = new DataView(b);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, SR, true);
+    v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) { const x = Math.max(-1, Math.min(1, pcm[i])); v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true); }
+    return new Blob([b], { type: 'audio/wav' });
+  }
+  async function prepareMp3() {
+    if (!take.length) return;
+    const job = ++mp3Job; mp3 = null; mp3Busy = true; updRecUI();
+    try {
+      const pcm = await renderTake();
+      let blob, ext;
+      try { await loadLame(); blob = toMp3(pcm); ext = 'mp3'; }
+      catch (e) { blob = toWav(pcm); ext = 'wav'; }              // cadangan kalau MP3 gagal dimuat
+      if (job !== mp3Job) return;
+      const d = new Date(), pad = n => String(n).padStart(2, '0');
+      const name = `gamelan-8bit-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+      mp3 = new File([blob], name, { type: blob.type });
+    } catch (e) {
+      if (job === mp3Job) recStat.textContent = 'Gagal menyiapkan file suara.';
+    } finally {
+      if (job === mp3Job) { mp3Busy = false; updRecUI(); }
+    }
+  }
+  function downloadFile(file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 20000);
+    const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+    recStat.textContent = inFrame
+      ? 'Kalau tidak ada yang terunduh, buka aplikasi lewat link GitHub-nya untuk berbagi.'
+      : `${file.name} diunduh (${(file.size / 1024).toFixed(0)} KB).`;
+  }
+  shareBtn.addEventListener('click', () => {
+    if (!mp3) return;
+    const file = mp3;
+    let canShareFile = false;
+    try { canShareFile = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+    if (canShareFile) {
+      navigator.share({ files: [file], title: 'Gamelan 8-Bit', text: 'Dengarkan gamelan 8-bit buatanku!' })
+        .then(() => { recStat.textContent = 'Terbagikan!'; })
+        .catch(e => { if (e && e.name !== 'AbortError') downloadFile(file); });
+    } else {
+      downloadFile(file);
+    }
+  });
   toBalBtn.addEventListener('click', () => {
     const L = LARAS[laras], n = L.notes.length;
     const notes = take.filter(e => e.name === 'saron').map(e => L.notes[e.idx % n]);
@@ -604,7 +716,7 @@
 
   function scheduleBeat(i, t) {
     const len = seq.length, spb = 60 / bpm, b = i + 1, note = seq[i];
-    const go = (name, idx, tt) => { if (!muted[name]) { INST[name](idx, tt); flash(name, idx, tt - ctx.currentTime); } };
+    const go = (name, idx, tt) => { if (!muted[name]) { INST[name](idx, tt); recEv(name, idx, tt); flash(name, idx, tt - ctx.currentTime); } };
     if (note !== null) go('saron', note, t);
     // bonang mipil: mengantisipasi nada berikutnya, dua kali lipat kecepatan
     const nx = nextNote(i), cur = note ?? lastNote(i);
@@ -623,7 +735,7 @@
     [0, 1].forEach(h => {
       const c = pat[pos + h], tt = t + h * spb / 2;
       const m = { D: 'dhung', T: 'tak', A: 'dang' }[c];
-      if (m && !muted.kendang) { INST[m](null, tt); flash(m, null, tt - ctx.currentTime); }
+      if (m && !muted.kendang) { INST[m](null, tt); recEv(m, null, tt); flash(m, null, tt - ctx.currentTime); }
     });
     // grid
     setTimeout(() => { if (playing) markCur(i); }, Math.max(0, (t - ctx.currentTime) * 1000));
@@ -663,6 +775,7 @@
     setCrush(!crushOn);
     crushBtn.textContent = '8-BIT: ' + (crushOn ? 'ON' : 'OFF');
     crushBtn.classList.toggle('on', crushOn);
+    if (take.length && !recording) prepareMp3();
   });
 
   // mixer
@@ -944,7 +1057,7 @@
     document.body.classList.toggle('tab-bonang', b.dataset.t === 'bonang');
     document.body.classList.toggle('tab-gong', b.dataset.t === 'gong');
   }));
-  $('#menuBtn').addEventListener('click', () => document.body.classList.add('drawer-open'));
+  $('#menuBtn').addEventListener('click', () => { document.body.classList.add('drawer-open'); $('#menuBtn').classList.remove('badge'); });
   $('#closeDrawer').addEventListener('click', () => document.body.classList.remove('drawer-open'));
   $('#drawer').addEventListener('click', e => { if (e.target.id === 'drawer') document.body.classList.remove('drawer-open'); });
 
